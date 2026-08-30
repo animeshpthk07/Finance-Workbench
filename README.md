@@ -1,34 +1,88 @@
-# 📊 Finance Workbench
+# Finance Workbench
 
-### AI-Powered Financial Analysis, Data Investigation, and Workflow Assistant
+### AI-Powered Financial Analysis, Data Investigation & Workflow Assistant
 
-Finance Workbench is an enterprise-grade AI workspace designed to augment finance professionals. It automates repetitive spreadsheet preparation, cross-document reconciliation, variance analysis, and data-cleaning tasks while keeping humans strictly responsible for judgment and final decision-making.
+Finance Workbench is an AI-powered workspace designed to help finance professionals investigate financial data, detect inconsistencies, perform financial analysis, and prepare first-draft deliverables.
 
----
+The system combines deterministic financial computation with AI-assisted investigation and document understanding.
 
-## 🏛️ Core Architecture Principle
-
-> **Deterministic Computation > AI Reasoning**
-
-The system uses standard vectorized Python/Pandas logic for arithmetic, totals, and variance reconciliation, and strictly limits AI/LLMs to document interpretation, anomaly investigation explanation, and management report drafting. 
+> **AI prepares, calculates, investigates, explains and organizes. Humans review, approve and make consequential financial decisions.**
 
 ---
 
-## 🚀 Key Features
+## Why Finance Workbench?
 
-* **Deterministic Variance Engine:** Computes Budget vs. Actuals, absolute variances, and percentage changes without LLM math errors.
-* **Data Detective:** Automatically scans ingested files for duplicate transactions, date mismatches, and unit variances.
-* **Cross-Document Evidence System:** Cross-references data across Excel (`.xlsx`), CSV (`.csv`), and PDF (`.pdf`) files, tracking exact source trails and cell/page locations.
-* **AI Investigator:** Generates contextual explanations for detected inconsistencies with configurable confidence scores.
-* **Human-in-the-Loop Review Controls:** Every AI output and draft report is explicitly flagged as `AI-generated draft — human review required`.
+Finance professionals routinely work across:
+
+- Excel spreadsheets
+- CSV files
+- PDF reports
+- Financial statements
+- Budgets and actuals
+- Management reports
+- Transaction data
+
+A significant amount of time can be spent finding information, reconciling numbers, identifying inconsistencies, calculating variances and preparing reports.
+
+Finance Workbench is designed to reduce this repetitive workload while maintaining traceability and human oversight.
 
 ---
 
-## 🛠️ Technology Stack
+## Core Capabilities
 
-* **Backend:** Python, FastAPI, Pandas, Pydantic
-* **Frontend:** Streamlit (Python-native enterprise UI)
-* **AI Layer:** OpenAI API (Configurable via environment variables)
-* **Document Processing:** Openpyxl, PyPDF, ReportLab
+### 🔎 Finance Data Detective
+
+Detects:
+
+- Numerical inconsistencies
+- Missing values
+- Duplicate transactions
+- Date mismatches
+- Period mismatches
+- Unit mismatches
+- Percentage inconsistencies
+- Cross-document inconsistencies
+- Data-quality anomalies
+
+### 📊 Financial Analysis
+
+Performs deterministic calculations including:
+
+- Budget vs Actual variance
+- Revenue growth
+- Expense growth
+- Gross margin
+- Operating margin
+- EBITDA margin
+- Period-over-period changes
+- Contribution analysis
+
+### 🤖 AI Investigation
+
+Uses AI to:
+
+- Understand finance-related tasks
+- Investigate detected discrepancies
+- Explain financial findings
+- Summarize supporting evidence
+- Generate first-draft analysis
+- Prepare management commentary
+
+### 📚 Evidence & Traceability
+
+Important findings are linked back to their underlying sources whenever possible.
+
+The system is designed to distinguish between:
+
+- Source facts
+- Deterministic calculations
+- AI-generated interpretations
+- Items requiring human review
 
 ---
+
+## Human-in-the-Loop
+
+Finance Workbench does not independently make consequential financial decisions.
+
+AI-generated outputs are drafts and should be reviewed by an appropriate finance professional before being used for business decisions.
