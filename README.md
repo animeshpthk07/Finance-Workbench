@@ -1,4 +1,3 @@
-%%writefile /content/finance-workbench/README.md
 # 📊 Finance Workbench
 
 ### AI-Powered Financial Analysis, Data Investigation, and Workflow Assistant
@@ -33,10 +32,3 @@ The system uses standard vectorized Python/Pandas logic for arithmetic, totals, 
 * **Document Processing:** Openpyxl, PyPDF, ReportLab
 
 ---
-
-## 🚀 Quick Start (Local Setup)
-
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/your-username/finance-workbench.git](https://github.com/your-username/finance-workbench.git)
-   cd finance-workbench
