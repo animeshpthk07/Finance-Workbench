@@ -1,4 +1,9 @@
 pandas>=2.0
 openpyxl>=3.1
-streamlit>=1.30
+xlrd>=2.0.1
+pydantic>=1.10
+streamlit>=1.32
 pypdf>=4.0
+reportlab>=4.0
+pytest>=8.0
+openai>=2.0

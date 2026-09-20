@@ -1,88 +1,68 @@
 # Finance Workbench
 
-### AI-Powered Financial Analysis, Data Investigation & Workflow Assistant
+An evidence-first workspace for finance teams to investigate source documents, calculate financial signals, and prepare review-ready explanations.
 
-Finance Workbench is an AI-powered workspace designed to help finance professionals investigate financial data, detect inconsistencies, perform financial analysis, and prepare first-draft deliverables.
+> Calculations are deterministic. The optional AI step produces a clearly labelled draft. Every finding requires human review.
 
-The system combines deterministic financial computation with AI-assisted investigation and document understanding.
+## What it does
 
-> **AI prepares, calculates, investigates, explains and organizes. Humans review, approve and make consequential financial decisions.**
+`Upload → Parse → Normalize → Calculate → Detect → Link evidence → Investigate → Explain → Review`
 
----
+- Reads CSV, XLSX/XLS, and searchable PDF documents.
+- Compares budget, actual, and forecast data with traceable variance calculations.
+- Detects material variances, missing values, duplicate source rows, and statistical outliers.
+- Links each signal to source rows and relevant PDF excerpts.
+- Produces a deterministic investigation playbook; an OpenAI draft is available only after explicit configuration.
+- Provides a professional Streamlit workbench, human review queue, and downloadable Markdown report draft.
 
-## Why Finance Workbench?
+## Quick start
 
-Finance professionals routinely work across:
+```bash
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-- Excel spreadsheets
-- CSV files
-- PDF reports
-- Financial statements
-- Budgets and actuals
-- Management reports
-- Transaction data
+Use the included `Q2_Actuals.csv`, `Q2_Budget.xlsx`, and `Q2_Report.pdf` to explore the demo workflow.
 
-A significant amount of time can be spent finding information, reconciling numbers, identifying inconsistencies, calculating variances and preparing reports.
+## Optional AI investigation draft
 
-Finance Workbench is designed to reduce this repetitive workload while maintaining traceability and human oversight.
+The application stays deterministic by default. To enable an explicit AI draft, configure both environment values:
 
----
+```bash
+OPENAI_API_KEY=your_key
+FINANCE_WORKBENCH_AI_MODEL=your_model
+```
 
-## Core Capabilities
+Facts and cited evidence remain separate from model interpretation. The app does not submit transactions, change records, or make autonomous finance decisions.
 
-### 🔎 Finance Data Detective
+## Quality and documentation
 
-Detects:
+- [Architecture](docs/ARCHITECTURE.md)
+- [Validation and reliability](docs/VALIDATION.md)
+- [Project validation record](docs/PROJECT_VALIDATION.md)
 
-- Numerical inconsistencies
-- Missing values
-- Duplicate transactions
-- Date mismatches
-- Period mismatches
-- Unit mismatches
-- Percentage inconsistencies
-- Cross-document inconsistencies
-- Data-quality anomalies
+Run checks locally:
 
-### 📊 Financial Analysis
+```bash
+pytest -q
+python evaluation.py
+```
 
-Performs deterministic calculations including:
+## Project structure
 
-- Budget vs Actual variance
-- Revenue growth
-- Expense growth
-- Gross margin
-- Operating margin
-- EBITDA margin
-- Period-over-period changes
-- Contribution analysis
+```text
+app.py                    Streamlit analyst workbench
+backend/ingestion.py      CSV, Excel, and PDF parsing
+backend/normalization.py  Transparent column mapping
+backend/pipeline.py       End-to-end deterministic workflow
+backend/investigator.py   Evidence-grounded investigation drafts
+backend/reporting.py      Review-ready Markdown report
+backend/models/           Typed finance records and evidence contracts
+evaluation.py             Portable reliability scenarios
+```
 
-### 🤖 AI Investigation
+## Boundaries
 
-Uses AI to:
-
-- Understand finance-related tasks
-- Investigate detected discrepancies
-- Explain financial findings
-- Summarize supporting evidence
-- Generate first-draft analysis
-- Prepare management commentary
-
-### 📚 Evidence & Traceability
-
-Important findings are linked back to their underlying sources whenever possible.
-
-The system is designed to distinguish between:
-
-- Source facts
-- Deterministic calculations
-- AI-generated interpretations
-- Items requiring human review
-
----
-
-## Human-in-the-Loop
-
-Finance Workbench does not independently make consequential financial decisions.
-
-AI-generated outputs are drafts and should be reviewed by an appropriate finance professional before being used for business decisions.
+This is a decision-support prototype, not an accounting system or audit opinion. Validate all findings against the linked source evidence before acting.

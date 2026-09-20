@@ -71,8 +71,7 @@ def parse_document(source: Any, name: Optional[str] = None) -> ParsedDocument:
 
         reader = PdfReader(BytesIO(payload))
         pages = [page.extract_text() or "" for page in reader.pages]
-        return ParsedDocument(name=document_name, kind="pdf", text="
-".join(pages))
+        return ParsedDocument(name=document_name, kind="pdf", text="\n".join(pages))
     except Exception as exc:
         return ParsedDocument(name=document_name, kind=extension.lstrip("."), errors=[str(exc)])
 
