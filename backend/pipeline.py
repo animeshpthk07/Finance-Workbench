@@ -8,7 +8,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from backend.ingestion import ParsedDocument, parse_documents
-from backend.investigator import investigate_findings
+from backend.investigator import InvestigatorConfig, investigate_findings
 from backend.models import Evidence, Finding, FinancialMetric, Investigation
 from backend.normalization import normalize_frame, rows_to_metrics
 
@@ -41,15 +41,15 @@ def _evidence_from_row(row: pd.Series, relevance: str) -> Evidence:
 def calculate_variance_table(rows: pd.DataFrame) -> pd.DataFrame:
     if rows.empty:
         return pd.DataFrame()
-    keys = ["metric_name", "department", "period", "currency"]
-    grouped = rows.groupby(keys + ["record_type"], dropna=False)["value"].sum().reset_index()
-    pivot = grouped.pivot_table(index=keys, columns="record_type", values="value", aggfunc="sum", fill_value=0).reset_index()
+    keys = [column for column in ["metric_name", "department", "period", "currency", "entity", "unit"] if column in rows.columns]
+    grouped = rows.groupby(keys + ["record_type"], dropna=False)["value"].sum(min_count=1).reset_index()
+    pivot = grouped.pivot(index=keys, columns="record_type", values="value").reset_index()
     if "budget" not in pivot.columns or "actual" not in pivot.columns:
         return pd.DataFrame()
     result = pivot.rename(columns={"budget": "budget_value", "actual": "actual_value"}).copy()
     result["variance_amount"] = result["actual_value"] - result["budget_value"]
     result["variance_percentage"] = result.apply(
-        lambda row: None if row["budget_value"] == 0 else round((row["variance_amount"] / abs(row["budget_value"])) * 100, 2),
+        lambda row: None if pd.isna(row["budget_value"]) or pd.isna(row["actual_value"]) or row["budget_value"] == 0 else round((row["variance_amount"] / abs(row["budget_value"])) * 100, 2),
         axis=1,
     )
     return result.sort_values("variance_amount", key=lambda values: values.abs(), ascending=False).reset_index(drop=True)
@@ -58,7 +58,8 @@ def calculate_variance_table(rows: pd.DataFrame) -> pd.DataFrame:
 def _duplicate_findings(rows: pd.DataFrame) -> list[Finding]:
     if rows.empty:
         return []
-    keys = [column for column in ["transaction_id", "metric_name", "department", "period", "value", "record_type"] if column in rows.columns]
+    rows = rows.dropna(subset=["value"])
+    keys = [column for column in ["transaction_id", "metric_name", "department", "period", "currency", "entity", "unit", "value", "record_type"] if column in rows.columns]
     duplicates = rows[rows.duplicated(subset=keys, keep=False)] if keys else pd.DataFrame()
     findings: list[Finding] = []
     for _, group in duplicates.groupby(keys, dropna=False):
@@ -106,15 +107,29 @@ def _variance_findings(variance: pd.DataFrame, rows: pd.DataFrame, threshold_per
     findings: list[Finding] = []
     for _, item in variance.iterrows():
         percentage = item["variance_percentage"]
-        if percentage is None or pd.isna(percentage) or abs(float(percentage)) < threshold_percent:
+        evidence_mask = rows["record_type"].isin(["budget", "actual"])
+        for key in ["metric_name", "department", "period", "currency", "entity", "unit"]:
+            if key in rows.columns:
+                evidence_mask &= rows[key] == item[key]
+        evidence_rows = rows[evidence_mask]
+        if pd.isna(item["budget_value"]) or pd.isna(item["actual_value"]):
+            missing = "budget" if pd.isna(item["budget_value"]) else "actual"
+            findings.append(Finding(
+                finding_type="missing_comparison", title=f"Missing comparison: {item['metric_name']}",
+                description=f"No usable {missing} amount matches {item['period']} ({item['department']}, {item['currency']}). Check reporting periods and mappings; a missing value is not assumed to be zero.",
+                severity="medium", metric_name=str(item["metric_name"]),
+                evidence=[_evidence_from_row(row, "Source row without a comparable counterpart") for _, row in evidence_rows.iterrows()],
+            ))
             continue
-        evidence_rows = rows[(rows["metric_name"] == item["metric_name"]) & (rows["department"] == item["department"]) & (rows["period"] == item["period"]) & (rows["record_type"].isin(["budget", "actual"]))]
-        severity = "critical" if abs(float(percentage)) >= 50 else "high" if abs(float(percentage)) >= 25 else "medium"
+        unbudgeted = item["budget_value"] == 0 and pd.notna(item["actual_value"]) and item["actual_value"] != 0
+        if not unbudgeted and (percentage is None or pd.isna(percentage) or abs(float(percentage)) < threshold_percent):
+            continue
+        severity = "high" if unbudgeted else "critical" if abs(float(percentage)) >= 50 else "high" if abs(float(percentage)) >= 25 else "medium"
         findings.append(
             Finding(
-                finding_type="budget_actual_variance",
+                finding_type="unbudgeted_actual" if unbudgeted else "budget_actual_variance",
                 title=f"Material variance: {item['metric_name']}",
-                description=f"Actual is {float(percentage):.2f}% {'above' if item['variance_amount'] > 0 else 'below'} budget for {item['period']} ({item['department']}).",
+                description=(f"Actual is {item['actual_value']:,.2f} {item['currency']} against an explicit zero budget; a percentage is undefined." if unbudgeted else f"Actual is {float(percentage):.2f}% {'above' if item['variance_amount'] > 0 else 'below'} budget for {item['period']} ({item['department']}, {item['currency']})."),
                 severity=severity,
                 metric_name=str(item["metric_name"]),
                 expected_value=float(item["budget_value"]),
@@ -130,7 +145,8 @@ def _outlier_findings(rows: pd.DataFrame) -> list[Finding]:
     if len(rows) < 4:
         return []
     findings: list[Finding] = []
-    for _, group in rows.dropna(subset=["value"]).groupby(["metric_name", "record_type"], dropna=False):
+    comparable = [column for column in ["metric_name", "record_type", "department", "currency", "entity", "unit"] if column in rows.columns]
+    for _, group in rows.dropna(subset=["value"]).groupby(comparable, dropna=False):
         if len(group) < 4:
             continue
         lower, upper = group["value"].quantile([0.25, 0.75])
@@ -163,7 +179,7 @@ def attach_pdf_evidence(findings: list[Finding], documents: list[ParsedDocument]
     return findings
 
 
-def run_workspace(sources: Iterable[Any], variance_threshold_percent: float = 10.0) -> WorkspaceRun:
+def run_workspace(sources: Iterable[Any], variance_threshold_percent: float = 10.0, investigator_config: InvestigatorConfig | None = None) -> WorkspaceRun:
     """Run all local stages and return reviewable, traceable outputs."""
     documents = parse_documents(sources)
     ingestion_errors = [f"{document.name}: {error}" for document in documents for error in document.errors]
@@ -173,4 +189,4 @@ def run_workspace(sources: Iterable[Any], variance_threshold_percent: float = 10
     variance = calculate_variance_table(rows)
     findings = (_missing_value_findings(rows) + _duplicate_findings(rows) + _variance_findings(variance, rows, variance_threshold_percent) + _outlier_findings(rows)) if not rows.empty else []
     attach_pdf_evidence(findings, documents)
-    return WorkspaceRun(documents=documents, normalized_rows=rows, metrics=metrics, variance=variance, findings=findings, investigations=investigate_findings(findings), ingestion_errors=ingestion_errors)
+    return WorkspaceRun(documents=documents, normalized_rows=rows, metrics=metrics, variance=variance, findings=findings, investigations=investigate_findings(findings, investigator_config or InvestigatorConfig()), ingestion_errors=ingestion_errors)

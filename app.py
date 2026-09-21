@@ -1,14 +1,24 @@
 """Streamlit interface for an evidence-first Finance Workbench."""
 
 from pathlib import Path
+import os
 
 import pandas as pd
 import streamlit as st
 
 from backend.pipeline import WorkspaceRun, run_workspace
-from backend.reporting import build_markdown_report
+from backend.investigator import InvestigatorConfig, investigate_finding
+from backend.reporting import build_json_report, build_markdown_report
 
 st.set_page_config(page_title="Finance Workbench", page_icon="📊", layout="wide")
+public_demo = os.getenv("FINANCE_WORKBENCH_PUBLIC_DEMO", "").lower() == "true"
+ai_config = InvestigatorConfig.from_environment()
+st.markdown("""<style>
+.block-container {padding-top: 2rem; padding-bottom: 3rem; max-width: 1500px;}
+[data-testid="stMetric"] {background: #eef5fa; border: 1px solid #d9e6ee; border-radius: 12px; padding: 18px;}
+[data-testid="stMetricLabel"] {color: #456174;}
+[data-testid="stMetricValue"] {color: #153d52;}
+</style>""", unsafe_allow_html=True)
 
 
 def run_demo() -> WorkspaceRun:
@@ -25,13 +35,21 @@ with st.sidebar:
     st.caption("Evidence-first financial investigation")
     page = st.radio("Workspace", ["Overview", "Investigate", "Review queue", "Report"], label_visibility="collapsed")
     st.divider()
+    st.caption("PUBLIC DEMO" if public_demo else "ANALYST WORKSPACE")
+    st.caption("AI drafting: available on request" if ai_config.enabled else "AI drafting: not configured · local playbooks active")
     st.caption("Code calculates. AI drafts. Finance professionals decide.")
+    st.caption("Session-only workspace. Export review records before closing.")
 
 st.title("Finance Workbench")
 st.caption("Trace every signal to its evidence. Review every conclusion before acting.")
 
-uploads = st.file_uploader("Add budget, actual, or supporting report documents", type=["csv", "xlsx", "xls", "pdf"], accept_multiple_files=True)
-actions = st.columns([1, 1, 4])
+if public_demo:
+    st.info("Public portfolio demo · synthetic Q2 data only. Uploads and external AI calls are disabled.")
+    uploads = []
+else:
+    uploads = st.file_uploader("Add budget, actual, or supporting report documents", type=["csv", "xlsx", "xls", "pdf"], accept_multiple_files=True)
+    st.caption("Documents are processed on the machine hosting this app, not necessarily your device. Use only data approved for that host. No external AI call is made during analysis.")
+actions = st.columns([2, 2, 2])
 if actions[0].button("Analyze documents", type="primary", disabled=not uploads):
     with st.spinner("Normalizing documents and building the review queue..."):
         st.session_state.workspace_run = run_workspace(uploads)
@@ -64,20 +82,23 @@ if page == "Overview":
         "Rows extracted": 0 if document.frame is None else len(document.frame),
         "PDF text captured": len(document.text),
     } for document in workspace.documents])
-    st.dataframe(intake, use_container_width=True, hide_index=True)
+    st.dataframe(intake, width="stretch", hide_index=True)
 
     st.subheader("Deterministic budget versus actual")
     if workspace.variance.empty:
         st.info("Upload budget and actual files to generate a variance comparison.")
     else:
-        st.dataframe(workspace.variance, use_container_width=True, hide_index=True)
-        st.bar_chart(workspace.variance.set_index("metric_name")[["budget_value", "actual_value"]])
+        st.dataframe(workspace.variance, width="stretch", hide_index=True)
+        if workspace.variance["currency"].nunique() == 1:
+            st.bar_chart(workspace.variance.set_index("metric_name")[["budget_value", "actual_value"]], color=["#97b8ca", "#087f8c"])
+        else:
+            st.caption("Multiple currencies detected; no combined chart or currency conversion is shown.")
 
 elif page == "Investigate":
     st.subheader("Evidence-linked investigation drafts")
     if not workspace.findings:
         st.success("No deterministic signals crossed the configured review threshold.")
-    for finding, investigation in zip(workspace.findings, workspace.investigations):
+    for index, (finding, investigation) in enumerate(zip(workspace.findings, workspace.investigations)):
         with st.expander(f"[{finding.severity.upper()}] {finding.title}", expanded=finding.severity in {"high", "critical"}):
             st.write(finding.description)
             st.write(investigation.summary)
@@ -99,8 +120,14 @@ elif page == "Investigate":
             if investigation.model_error:
                 st.warning(investigation.model_error)
             with st.popover("Show AI investigation prompt"):
-                st.caption("This is sent to an external model only after an administrator explicitly configures the optional integration.")
+                st.caption("This exact prompt is sent to OpenAI only when you authorize the optional draft below. Up to 12 truncated evidence excerpts are included.")
                 st.code(investigation.llm_ready_prompt)
+            if ai_config.enabled:
+                consent = st.checkbox("I am authorized to send this finding and the shown evidence to OpenAI; API charges may apply.", key=f"ai-consent-{finding.finding_id}")
+                if st.button("Generate optional AI draft", key=f"ai-draft-{finding.finding_id}", disabled=not consent):
+                    with st.spinner("Requesting one evidence-linked draft..."):
+                        workspace.investigations[index] = investigate_finding(finding, ai_config)
+                    st.rerun()
 
 elif page == "Review queue":
     st.subheader("Human review queue")
@@ -112,10 +139,12 @@ elif page == "Review queue":
             left.caption(f"{finding.description} · Severity: {finding.severity.title()}")
             reviewed = right.checkbox("Reviewed", value=finding.review_status == "reviewed", key=f"reviewed-{finding.finding_id}")
             finding.review_status = "reviewed" if reviewed else "pending"
-            st.text_area("Reviewer note", key=f"note-{finding.finding_id}", placeholder="Add a verified explanation or next action.")
+            finding.reviewer_note = st.text_area("Reviewer note", value=finding.reviewer_note, key=f"note-{finding.finding_id}", placeholder="Add a verified explanation or next action.", max_chars=4000)
 
 else:
     st.subheader("Exportable investigation draft")
     report = build_markdown_report(workspace)
+    downloads = st.columns(2)
+    downloads[0].download_button("Download Markdown report", data=report, file_name="finance-workbench-investigation-draft.md", mime="text/markdown")
+    downloads[1].download_button("Download JSON review record", data=build_json_report(workspace), file_name="finance-workbench-review-record.json", mime="application/json")
     st.markdown(report)
-    st.download_button("Download Markdown report", data=report, file_name="finance-workbench-investigation-draft.md", mime="text/markdown")

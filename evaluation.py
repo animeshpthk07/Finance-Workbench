@@ -53,3 +53,4 @@ if __name__ == "__main__":
     print(f"Evaluation: {results['passed']}/{results['total']} passed")
     for case in results["cases"]:
         print(f"[{'PASS' if case['passed'] else 'FAIL'}] {case['name']}: {case['detail']}")
+    raise SystemExit(0 if results["passed"] == results["total"] else 1)

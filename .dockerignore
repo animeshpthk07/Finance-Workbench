@@ -1,0 +1,11 @@
+.git
+.venv
+venv
+.env
+.streamlit/secrets.toml
+__pycache__
+.pytest_cache
+.test-deps
+.runtime-deps
+*.log
+docs/screenshots

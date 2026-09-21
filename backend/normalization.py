@@ -46,15 +46,14 @@ def infer_record_type(filename: str) -> str:
 def normalize_frame(frame: pd.DataFrame, source_file: str, record_type: str | None = None) -> pd.DataFrame:
     data = _rename_columns(frame)
     if "metric_name" not in data.columns:
-        data["metric_name"] = "Unlabelled metric"
+        data["metric_name"] = ""
     if "value" not in data.columns:
-        numeric_columns = data.select_dtypes(include="number").columns.tolist()
-        data["value"] = data[numeric_columns[0]] if numeric_columns else pd.NA
+        data["value"] = pd.NA
     for column, default in {"period": "Unspecified period", "department": "Unspecified department", "currency": "INR", "unit": "", "entity": ""}.items():
         if column not in data.columns:
             data[column] = default
         data[column] = data[column].fillna(default).astype(str).str.strip()
-    data["metric_name"] = data["metric_name"].fillna("Unlabelled metric").astype(str).str.strip()
+    data["metric_name"] = data["metric_name"].fillna("").astype(str).str.strip()
     data["value"] = pd.to_numeric(data["value"], errors="coerce")
     data["record_type"] = record_type or infer_record_type(source_file)
     data["source_file"] = source_file

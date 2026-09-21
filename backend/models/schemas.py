@@ -44,6 +44,7 @@ class Finding(BaseModel):
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     requires_human_review: bool = True
     review_status: ReviewStatus = "pending"
+    reviewer_note: str = ""
 
 
 class Investigation(BaseModel):
