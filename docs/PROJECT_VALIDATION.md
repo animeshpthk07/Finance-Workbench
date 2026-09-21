@@ -10,6 +10,9 @@ The release was prepared from published commit `639b1ab` and checked on 21 Septe
 - Demo result: 3 documents, 13 normalized metrics, 4 findings, and 2 linked PDF excerpts. The findings are a possible duplicate, a material Travel variance, and two unmatched Salaries reporting-period comparisons. Missing counterparts are not represented as zero.
 - Review checkbox: updates the pending review queue.
 - Markdown and JSON exports: include review status, notes, investigation drafts and source evidence.
+- Hosted app: the existing Streamlit deployment runs Python 3.12 and was verified with public-demo mode enabled (no uploads or external AI controls).
+- GitHub Actions: [release quality run](https://github.com/animeshpthk07/Finance-Workbench/actions/runs/35636402663) passed for the main implementation commit `6ffa67a`.
+- Screenshots: [overview](screenshots/overview.png) and [evidence detail](screenshots/investigation.png) were captured from the actual running app with synthetic data, not generated mockups.
 
 The optional model integration was tested with simulated success, outage and malformed outputs, plus a mocked SDK request that verifies timeout, token cap, structured JSON and `store=False`. Normal analysis is tested to make no external AI calls even when credentials are configured. A live paid model request was not run because no API credential/model was configured in the task environment.
 

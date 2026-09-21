@@ -90,7 +90,10 @@ if page == "Overview":
     else:
         st.dataframe(workspace.variance, width="stretch", hide_index=True)
         if workspace.variance["currency"].nunique() == 1:
-            st.bar_chart(workspace.variance.set_index("metric_name")[["budget_value", "actual_value"]], color=["#97b8ca", "#087f8c"])
+            chart = workspace.variance.dropna(subset=["budget_value", "actual_value"]).copy()
+            chart["Comparison"] = chart[["metric_name", "department", "period", "entity", "unit"]].astype(str).agg(" · ".join, axis=1).str.rstrip(" ·")
+            st.bar_chart(chart.set_index("Comparison")[["budget_value", "actual_value"]], color=["#97b8ca", "#087f8c"], stack=False)
+            st.caption("Matched reporting periods only; amounts are not stacked or converted between currencies.")
         else:
             st.caption("Multiple currencies detected; no combined chart or currency conversion is shown.")
 

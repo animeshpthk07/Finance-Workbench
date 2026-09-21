@@ -1,5 +1,7 @@
 # Finance Workbench
 
+[![Quality checks](https://github.com/animeshpthk07/Finance-Workbench/actions/workflows/quality.yml/badge.svg)](https://github.com/animeshpthk07/Finance-Workbench/actions/workflows/quality.yml)
+
 An evidence-first workspace for finance teams to investigate source documents, calculate financial signals, and prepare review-ready explanations.
 
 > Calculations are deterministic. The optional AI step produces a clearly labelled draft. Every finding requires human review.
@@ -7,6 +9,8 @@ An evidence-first workspace for finance teams to investigate source documents, c
 [Open the live demo](https://finance-workbench-otea96uvyvjtkud27u4a9k.streamlit.app/) · [90-second walkthrough](docs/PORTFOLIO.md) · [Validation record](docs/PROJECT_VALIDATION.md)
 
 ![Finance Workbench overview](docs/screenshots/overview.png)
+
+[Evidence and interpretation screenshot](docs/screenshots/investigation.png)
 
 ## What it does
 
