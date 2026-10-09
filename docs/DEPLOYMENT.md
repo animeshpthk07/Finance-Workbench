@@ -10,7 +10,7 @@ The public portfolio should use synthetic data only. Set the following in Stream
 FINANCE_WORKBENCH_PUBLIC_DEMO = "true"
 ```
 
-This disables document uploads and server-funded AI requests. Do not put an API key in an anonymous public demo. The existing app tracks `animeshpthk07/Finance-Workbench`, branch `main`, entrypoint `app.py`. Python 3.12 is the verified runtime.
+When enabled, this disables document uploads and server-funded AI requests. Do not put an API key in an anonymous public demo. The expected app configuration is `animeshpthk07/Finance-Workbench`, branch `main`, entrypoint `app.py`; verify those values and public-demo mode in the hosting account before publishing. Source checks do not establish the live host's configuration. Python 3.12 is the verified runtime.
 
 For a fresh deployment, select that repository, branch, entrypoint and Python version in Community Cloud. Source changes on the selected branch redeploy automatically. See the [official Streamlit deployment instructions](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy).
 
@@ -25,6 +25,28 @@ python -m streamlit run app.py
 ```
 
 The application processes documents on its hosting machine. Local hosting keeps parsing on your own computer; a hosted instance receives uploaded files on that server. Review state is per-session and not a durable database. Export Markdown or JSON before closing. There is no JSON import or identity-verified audit trail in this release.
+
+## Input limits and parser boundaries
+
+`backend.ingestion.IngestionLimits` defines the following defaults. Both `parse_document` and `parse_documents` enforce them; callers can supply a stricter immutable limits object. These are code-level options, not environment variables or user-facing settings.
+
+| Input | Default limit |
+| --- | --- |
+| Files per batch | 10 |
+| Raw bytes per file / per batch | 20 MiB / 40 MiB |
+| Table rows / columns | 50,000 / 100 |
+| XLSX archive members | 512 |
+| Expanded bytes per XLSX member / archive | 16 MiB / 64 MiB |
+| XLSX member expansion ratio | 200:1 |
+| PDF pages | 50 |
+| Decoded PDF page content / total content streams | 4 MiB / 16 MiB |
+| Extracted PDF text, including page separators | 1,000,000 characters |
+
+Files are read in bounded chunks. A capacity violation rejects the entire batch with a visible error and no partial analysis; invalid formats retain per-file errors. Tables are checked after reading at most one row beyond the limit, and only the first Excel worksheet is used. Archive metadata and actual expanded member sizes are checked before Excel parsing. A ZIP-based workbook renamed `.xls` receives the same archive checks as `.xlsx`. Explicit `openpyxl` and `xlrd` engines prevent automatic selection of unrelated spreadsheet formats; encrypted workbook archives are rejected.
+
+These controls reduce accepted workload but do not bound every parser allocation or execution time. ZIP directory parsing, Excel shared strings/styles, wide CSV tables and legacy XLS structures can allocate memory before the relevant checks. PDF page discovery, decompression and text extraction can also allocate memory before their size checks. There is no isolated parsing worker, OS-enforced memory quota or hard timeout. Keep uploads restricted to approved users until authentication, rate limits and process-level resource isolation are in place. The public-demo flag is a feature switch, not authentication.
+
+Markdown report exports escape untrusted text so source values and reviewer notes cannot inject report links, images or HTML. JSON preserves exact original content. This output protection does not sanitize other user interfaces or turn source content into trusted evidence.
 
 ## Optional OpenAI draft — private/local use
 

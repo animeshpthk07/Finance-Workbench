@@ -47,7 +47,15 @@ FINANCE_WORKBENCH_AI_MODEL=your_model
 
 Facts and cited evidence remain separate from model interpretation. The app does not submit transactions, change records, or make autonomous finance decisions.
 
-The anonymous public demo uses synthetic data with uploads and external AI disabled. See [deployment and secret handling](docs/DEPLOYMENT.md) for local uploads, optional AI, request limits and hosting instructions. A live paid model request is not part of the automated test results.
+Public-demo mode uses synthetic data with uploads and external AI disabled when `FINANCE_WORKBENCH_PUBLIC_DEMO=true` is configured. The source-code checks do not verify a live host's settings. See [deployment and secret handling](docs/DEPLOYMENT.md) for local uploads, optional AI, request limits and hosting instructions. A live paid model request is not part of the automated test results.
+
+## Input and report safeguards
+
+Uploads have backend limits: 10 files per batch, 20 MiB per file, 40 MiB total, and 50,000 rows by 100 columns per table. Excel archives and PDFs have additional expansion, page and text limits described in [Deployment](docs/DEPLOYMENT.md#input-limits-and-parser-boundaries). Exceeding a capacity limit rejects the entire batch rather than producing an analysis of truncated inputs. Malformed files still produce visible per-file errors.
+
+XLSX archive checks use content detection even if a file is renamed `.xls`; explicit Excel engines restrict parsing to the supported formats. Markdown exports render source text literally, including filenames, evidence and reviewer notes; JSON exports retain the original strings.
+
+These are workload and output safeguards, not a parser sandbox or proof of production security. Parser allocations can occur before some limits are checked; there is no worker memory limit or parsing timeout.
 
 ## Quality and documentation
 
@@ -57,11 +65,12 @@ The anonymous public demo uses synthetic data with uploads and external AI disab
 - [Deployment](docs/DEPLOYMENT.md)
 - [Portfolio and LinkedIn draft](docs/PORTFOLIO.md)
 
-Release checks: **26 tests passed**, including four-page Streamlit navigation and review exports; **6/6 synthetic evaluation scenarios passed**. These are software checks, not measured real-world detection accuracy.
+The earlier release validation recorded **26 tests passed**, including four-page Streamlit navigation and review exports, and **6/6 synthetic evaluation scenarios passed**. That historical result does not certify later changes. Current checks include adversarial input and rendered Markdown regression tests. These are software checks, not measured real-world detection accuracy.
 
 Run checks locally:
 
 ```bash
+python -m pip install -r requirements-dev.txt
 pytest -q
 python evaluation.py
 ```
