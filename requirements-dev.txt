@@ -1,0 +1,3 @@
+-r requirements.txt
+# Render hostile report text with tables, raw HTML and automatic links enabled.
+markdown-it-py[linkify]>=4.0,<5
